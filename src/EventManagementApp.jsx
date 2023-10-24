@@ -1,6 +1,9 @@
+import { AppTheme } from './themes';
 
 export const EventManagementApp = () => {
     return (
-        <div>EventManagementApp</div>
+        <AppTheme>
+            <div>EventManagementApp</div>
+        </AppTheme>
     )
 }
