@@ -1,6 +1,9 @@
+import { EventLayout } from '../layout/EventLayout';
 
 export const EventPage = () => {
     return (
-        <div>EventPage</div>
+        <EventLayout>
+            <h3>EventPage</h3>
+        </EventLayout>
     )
 }
