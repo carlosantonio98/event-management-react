@@ -50,8 +50,10 @@ export const EventPage = () => {
             return 
         }
 
-        // TODO: Save event
-        console.log(`Event ${ eventId } deleted`);
+        axiosClient.delete(`/events/${eventId}`)
+            .then(() => {
+                getEvents();
+            });
     }
 
     return (
