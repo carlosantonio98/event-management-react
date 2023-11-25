@@ -1,13 +1,117 @@
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+
 import { Button, FormControl, Grid, InputAdornment, InputLabel, MenuItem, Select, TextField } from '@mui/material';
+
+import axiosClient from '../../axios-client';
+
 import { EventLayout } from '../layout/EventLayout';
-import { DateTimePicker } from '@mui/x-date-pickers';
+import { useForm } from '../../hooks/useForm';
+
+const formValidation = {
+    name: [ (value) => value.length >= 5 , "Debe de contener al menos 5 caracteres" ],
+    description: [ (value) => value.length >= 30 , "Debe de contener al menos 30 caracteres" ],
+    location: [ (value) => value.length >= 5 , "Debe de contener al menos 5 caracteres" ],
+    price: [ (value) => value > 0 , "Debe de contener un precio mayor a 0" ],
+    capacity: [ (value) => value >= 4 , "Debe de contener al menos una capacidad de 4 persona" ],
+    requirements: [ (value) => value.length >= 5 , "Debe de contener al menos 5 caracteres" ],
+}
 
 export const EventForm = () => {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const [ formSubmitted, setFormSubmitted ] = useState(false);
+
+    const [ formData, setFormData ] = useState({
+        id: null,
+        name: "",
+        description: "",
+        startDate: "",
+        endDate: "",
+        location: "",
+        categoryFk: "",
+        price: "",
+        capacity: "",
+        requirements: ""
+    });
+
+    useEffect(() => {
+        const getEvent = () => {
+            axiosClient.get(`/events/${id}`)
+                .then(({ data }) => {
+                    setFormData(data);
+                });
+        }
+
+        if (id) {
+            getEvent();
+        }
+    }, [id]);
+
+    const { 
+        name, nameValid,
+        description, descriptionValid,
+        startDate,
+        endDate, 
+        location, locationValid,
+        categoryFk,
+        price, priceValid,
+        capacity, capacityValid,
+        requirements, requirementsValid,
+        onInputChange,
+        formState, isFormValid
+    } = useForm( formData, formValidation );
+
+    const onSave = ( event ) => {
+        event.preventDefault();
+        setFormSubmitted(true);
+
+        if ( !isFormValid ) return;
+
+        if ( id ) 
+            updateEvent();
+        else 
+            createEvent();
+    }
+
+    const createEvent = () => {
+        axiosClient.post('/events', formState)
+            .then((data) => {
+                if (data.status == "ok") {
+                    console.log("Event save");
+                } else {
+                    console.log("Status event: " + data.status);
+                }
+
+                navigate('/events', {
+                    replace: true
+                });
+
+                setFormSubmitted(false);
+            });
+    }
+
+    const updateEvent = () => {
+        axiosClient.put(`/events/${id}`, formState)
+            .then((data) => {
+                if (data.status == "ok") {
+                    console.log("Event save");
+                } else {
+                    console.log("Status event: " + data.status);
+                }
+
+                navigate('/events', {
+                    replace: true
+                });
+
+                setFormSubmitted(false);
+            });
+    }
 
     return (
         <EventLayout>
 
-            <form autoComplete="off">
+            <form autoComplete="off" onSubmit={ onSave } method="POST">
                 <h2>Crear evento</h2>
 
                 <Grid container spacing={2}>
@@ -19,7 +123,12 @@ export const EventForm = () => {
                             color="secondary"
                             type="text"
                             sx={{mb: 3}}
-                            fullWidth/>
+                            fullWidth
+                            name="name"
+                            value={ name }
+                            onChange={ onInputChange }
+                            error={ !!nameValid && formSubmitted }
+                            helperText={ !!nameValid && formSubmitted ? nameValid : '' }/>
                     </Grid>
                     <Grid item xs={12}>
                         <TextField 
@@ -29,19 +138,38 @@ export const EventForm = () => {
                             color="secondary"
                             type="text"
                             fullWidth
-                            sx={{mb: 3}}/>
+                            sx={{mb: 3}}
+                            name="description"
+                            value={ description }
+                            onChange={ onInputChange }
+                            error={ !!descriptionValid && formSubmitted }
+                            helperText={ !!descriptionValid && formSubmitted ? descriptionValid : '' }/>
                     </Grid>
                     <Grid item xs={12} lg={6}>
-                        <DateTimePicker
+                        <TextField 
                             label="Fecha y Hora de Inicio"
+                            variant="outlined"
+                            color="secondary"
+                            type="datetime-local"
+                            InputLabelProps={{ shrink: true }}
+                            fullWidth
                             sx={{mb: 3}}
-                            slotProps={{ textField: { fullWidth: true } }}/>
+                            name="startDate"
+                            value={ startDate ?? "" }
+                            onChange={ onInputChange }/>
                     </Grid >
                     <Grid item xs={12} lg={6}>
-                        <DateTimePicker
-                            label="Fecha y Hora de Finalización"
+                    <TextField 
+                            label="Fecha y Hora de Fin"
+                            variant="outlined"
+                            color="secondary"
+                            type="datetime-local"
+                            InputLabelProps={{ shrink: true }}
+                            fullWidth
                             sx={{mb: 3}}
-                            slotProps={{ textField: { fullWidth: true } }}/>
+                            name="endDate"
+                            value={ endDate ?? "" }
+                            onChange={ onInputChange } />
                     </Grid>
                     <Grid item xs={12}>
                         <TextField 
@@ -51,7 +179,12 @@ export const EventForm = () => {
                             color="secondary"
                             type="text"
                             fullWidth
-                            sx={{mb: 3}}/>
+                            sx={{mb: 3}}
+                            name="location"
+                            value={ location }
+                            onChange={ onInputChange }
+                            error={ !!locationValid && formSubmitted }
+                            helperText={ !!locationValid && formSubmitted ? locationValid : '' }/>
                     </Grid>
                     <Grid item xs={12} lg={4}>
                         <FormControl fullWidth>
@@ -61,10 +194,13 @@ export const EventForm = () => {
                                 id="demo-simple-select"
                                 color="secondary"
                                 label="Categoría del Evento"
-                                sx={{mb: 3}}>
-                                <MenuItem value={10}>Ten</MenuItem>
-                                <MenuItem value={20}>Twenty</MenuItem>
-                                <MenuItem value={30}>Thirty</MenuItem>
+                                sx={{mb: 3}}
+                                name="categoryFk"
+                                value={ categoryFk }
+                                onChange={ onInputChange }>
+                                <MenuItem value={1}>Ten</MenuItem>
+                                <MenuItem value={2}>Twenty</MenuItem>
+                                <MenuItem value={3}>Thirty</MenuItem>
                             </Select>
                         </FormControl>
                     </Grid>
@@ -79,7 +215,12 @@ export const EventForm = () => {
                             sx={{mb: 3}}
                             InputProps={{
                                 startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                            }}/>
+                            }}
+                            name="price"
+                            value={ price }
+                            onChange={ onInputChange }
+                            error={ !!priceValid && formSubmitted }
+                            helperText={ !!priceValid && formSubmitted ? priceValid : '' }/>
                     </Grid>
                     <Grid item xs={12} lg={4}>
                         <TextField 
@@ -89,8 +230,12 @@ export const EventForm = () => {
                             color="secondary"
                             type="number"
                             fullWidth
-                            sx={{mb: 3}}/>
-
+                            sx={{mb: 3}}
+                            name="capacity"
+                            value={ capacity }
+                            onChange={ onInputChange }
+                            error={ !!capacityValid && formSubmitted }
+                            helperText={ !!capacityValid && formSubmitted ? capacityValid : '' }/>
                     </Grid>
                     <Grid item xs={12}>
                         <TextField 
@@ -113,11 +258,19 @@ export const EventForm = () => {
                             color="secondary"
                             type="text"
                             fullWidth
-                            sx={{mb: 3}}/>
+                            sx={{mb: 3}}
+                            name="requirements"
+                            value={ requirements }
+                            onChange={ onInputChange }
+                            error={ !!requirementsValid && formSubmitted }
+                            helperText={ !!requirementsValid && formSubmitted ? requirementsValid : '' }/>
                     </Grid>
                 </Grid>
 
-                <Button variant="contained" color="primary" type="submit">Crear</Button>             
+                <Button 
+                    variant="contained" 
+                    color="primary" 
+                    type="submit">Guardar</Button>             
             </form>
 
         </EventLayout>

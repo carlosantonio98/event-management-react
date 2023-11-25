@@ -6,7 +6,8 @@ export const EventRoutes = () => {
         <Routes>
 
             <Route path="/events" element={ <EventPage /> } />
-            <Route path="/events/new" element={ <EventForm /> } />
+            <Route path="/events/new" element={ <EventForm key="create" /> } />
+            <Route path="/events/:id" element={ <EventForm key="update" /> } />
 
         </Routes>
     )
