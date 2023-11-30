@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import { Button, FormControl, Grid, InputAdornment, InputLabel, MenuItem, Select, TextField } from '@mui/material';
 
+import axios from 'axios';
 import axiosClient from '../../axios-client';
 
 import { EventLayout } from '../layout/EventLayout';
@@ -21,6 +22,35 @@ export const EventForm = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [ formSubmitted, setFormSubmitted ] = useState(false);
+    const [ categories, setCategories ] = useState([]);
+
+    useEffect(() => {
+        const getCategories = () => {
+            const source = axios.CancelToken.source(); // Crear la fuente del token de cancelación
+
+            axiosClient.get('/categories', {
+                cancelToken: source.token
+            })
+            .then(({ data }) => {
+                setCategories(data);
+            })
+            .catch((error) => {
+                if (axios.isCancel(error)) {
+                    console.log('Solicitud cancelada:', error.message);
+                } else {
+                    console.error('Error fetching data:', error);
+                }
+            });
+
+            return () => {
+                source.cancel('Request canceled by cleanup'); // Cancelar la solicitud al desmontar el componente
+            }
+        }
+
+        const cleanupFunction = getCategories();
+
+        return cleanupFunction;
+    }, []);
 
     const [ formData, setFormData ] = useState({
         id: null,
@@ -37,15 +67,27 @@ export const EventForm = () => {
 
     useEffect(() => {
         const getEvent = () => {
-            axiosClient.get(`/events/${id}`)
-                .then(({ data }) => {
-                    setFormData(data);
-                });
+            const source = axios.CancelToken.source(); // Crear la fuente del token de cancelación
+
+            axiosClient.get(`/events/${id}`, {
+                cancelToken: source.token
+            })
+            .then(({ data }) => {
+                setFormData(data);
+            });
+
+            return () => {
+                source.cancel('Request canceled by cleanup'); // Cancelar la solicitud al desmontar el componente
+            }
         }
 
+        let cleanupFunction;
+
         if (id) {
-            getEvent();
+            cleanupFunction = getEvent();
         }
+
+        return cleanupFunction;
     }, [id]);
 
     const { 
@@ -198,9 +240,11 @@ export const EventForm = () => {
                                 name="categoryFk"
                                 value={ categoryFk }
                                 onChange={ onInputChange }>
-                                <MenuItem value={1}>Ten</MenuItem>
-                                <MenuItem value={2}>Twenty</MenuItem>
-                                <MenuItem value={3}>Thirty</MenuItem>
+                                {
+                                    categories.map((category) => (
+                                        <MenuItem key={category.id} value={category.id}>{category.name}</MenuItem>
+                                    ))
+                                }
                             </Select>
                         </FormControl>
                     </Grid>
