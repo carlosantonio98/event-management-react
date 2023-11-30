@@ -10,6 +10,7 @@ import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import { Delete, Edit } from '@mui/icons-material';
 
+import axios from 'axios';
 import axiosClient from '../../axios-client';
 
 import { EventLayout } from '../layout/EventLayout';
@@ -17,32 +18,38 @@ import { EventLayout } from '../layout/EventLayout';
 export const EventPage = () => {
     const [ events, setEvents ] = useState([]);
     const [ isLoading, setIsLoading ] = useState(false);
-
+    
     const getEvents = () => {
         setIsLoading(true);
+        
+        const source = axios.CancelToken.source(); // Crear la fuente del token de cancelación
 
-        axiosClient.get("/events")
-            .then(({ data }) => {
-                setEvents( data );
-                setIsLoading(false);
-            })
-            .catch((error) => {
-                if (axiosClient.isCancel(error)) {
-                    console.log('Solicitud cancelada:', error.message);
-                } else {
-                    console.error('Error fetching data:', error);
-                }
+        axiosClient.get("/events", {
+            cancelToken: source.token
+        })
+        .then(({ data }) => {
+            setEvents( data );
+            setIsLoading(false);
+        })
+        .catch((error) => {
+            if (axios.isCancel(error)) {
+                console.log('Solicitud cancelada:', error.message);
+            } else {
+                console.error('Error fetching data:', error);
+            }
 
-                setIsLoading(false);
-            });
+            setIsLoading(false);
+        });
+
+        return () => {
+            source.cancel('Request canceled by cleanup'); // Cancelar la solicitud al desmontar el componente
+        }
     }
 
     useEffect(() => {
-        getEvents();
+        const cleanupFunction = getEvents();
 
-        return(() => {
-            getEvents();
-        })
+        return cleanupFunction;
     }, []);
 
     const onDelete = (eventId) => {
@@ -52,7 +59,8 @@ export const EventPage = () => {
 
         axiosClient.delete(`/events/${eventId}`)
             .then(() => {
-                getEvents();
+                // Actualizar el arreglo de eventos
+                setEvents((events) => events.filter((event) => event.id != eventId))
             });
     }
 
@@ -69,19 +77,19 @@ export const EventPage = () => {
             <TableContainer component={Paper}>
                 <Table sx={{ minWidth: 650 }} aria-label="simple table">
                     <TableHead>
-                    <TableRow>
-                        <TableCell>Nombre</TableCell>
-                        <TableCell align="right">Descripción</TableCell>
-                        <TableCell align="right">Fecha inicio</TableCell>
-                        <TableCell align="right">Fecha fin</TableCell>
-                        <TableCell align="right">Categoría</TableCell>
-                        <TableCell align="right"></TableCell>
-                    </TableRow>
+                        <TableRow>
+                            <TableCell>Nombre</TableCell>
+                            <TableCell align="right">Descripción</TableCell>
+                            <TableCell align="right">Fecha inicio</TableCell>
+                            <TableCell align="right">Fecha fin</TableCell>
+                            <TableCell align="right">Categoría</TableCell>
+                            <TableCell align="right"></TableCell>
+                        </TableRow>
                     </TableHead>
                     <TableBody>
                         {
                             isLoading && 
-                            <CircularProgress />
+                            <TableRow><TableCell align='center'><CircularProgress /></TableCell></TableRow>
                         }
 
                         {
